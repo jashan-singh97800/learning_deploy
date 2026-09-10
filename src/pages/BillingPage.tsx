@@ -47,7 +47,7 @@ function numberToWords(n: number): string {
 export default function BillingPage() {
   const dispatch = useDispatch();
   const cart = useSelector((s: RootState) => s.cart);
-  const user = useSelector((s: RootState) => s.auth.user);
+ useSelector((s: RootState) => s.auth.user);
 
   const [items, setItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
