@@ -15,6 +15,7 @@ import {
   User,
   Settings,
   Users,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,7 +27,12 @@ const navItems = [
   { to: '/users', icon: Users, label: 'Staff Management', roles: ['admin'] },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const user = useSelector((s: RootState) => s.auth.user);
@@ -48,61 +54,83 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-40">
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center">
-            <ChefHat className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg leading-none truncate">{restaurant?.name || 'RestoBill'}</h1>
-            <p className="text-gray-400 text-xs mt-0.5">Restaurant System</p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+        />
+      )}
 
-      {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems
-          .filter((item) => user?.role && item.roles.includes(user.role))
-          .map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
-                isActive
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-              }`
-            }
+      <aside
+        className={`w-64 bg-gray-900 text-white flex flex-col min-h-screen fixed left-0 top-0 z-50 transition-transform duration-200 ease-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}
+      >
+        {/* Logo */}
+        <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <ChefHat className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-bold text-lg leading-none truncate">{restaurant?.name || 'RestoBill'}</h1>
+              <p className="text-gray-400 text-xs mt-0.5">Restaurant System</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="lg:hidden p-1.5 -mr-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition flex-shrink-0"
           >
-            <Icon className="w-5 h-5" />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* User */}
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-amber-400 rounded-full flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-gray-400 truncate capitalize">{user?.role}</p>
-          </div>
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-4 py-2.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition text-sm font-medium"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
-      </div>
-    </aside>
+
+        {/* Nav */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {navItems
+            .filter((item) => user?.role && item.roles.includes(user.role))
+            .map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
+                  isActive
+                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                }`
+              }
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* User */}
+        <div className="p-4 border-t border-gray-800">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 bg-gradient-to-br from-orange-400 to-amber-400 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs text-gray-400 truncate capitalize">{user?.role}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition text-sm font-medium"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

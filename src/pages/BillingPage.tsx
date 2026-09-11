@@ -14,7 +14,7 @@ import {
   ShoppingCart, Plus, Minus, Trash2, Search,
   UtensilsCrossed, User, Phone, Receipt, Printer,
   CheckCircle, X, MapPin, MessageSquare, Hash,
-  Calendar, Tag, PauseCircle, ListRestart, ArrowUpRight, RefreshCw
+  Calendar, Tag, PauseCircle, ListRestart, ArrowUpRight, ArrowLeft, RefreshCw
 } from 'lucide-react';
 import { getHeldOrders, deleteOrder } from '../api/orders';
 
@@ -65,6 +65,7 @@ export default function BillingPage() {
   const [showHeldModal, setShowHeldModal] = useState(false);
   const [heldOrders, setHeldOrders] = useState<Order[]>([]);
   const [loadingHeld, setLoadingHeld] = useState(false);
+  const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
 
   const [custName, setCustName] = useState(cart.customerName);
   const [custPhone, setCustPhone] = useState(cart.customerPhone);
@@ -244,7 +245,7 @@ export default function BillingPage() {
     <div className="flex h-screen overflow-hidden bg-slate-100">
 
       {/* ── LEFT: Menu Selector ── */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className={`${mobileView === 'cart' ? 'hidden' : 'flex'} lg:flex flex-1 flex-col overflow-hidden min-w-0 w-full pb-16 lg:pb-0`}>
         <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -324,12 +325,19 @@ export default function BillingPage() {
       </div>
 
       {/* ── RIGHT: Billing Panel ── */}
-      <div className="w-[480px] flex-shrink-0 bg-white border-l border-gray-200 flex flex-col shadow-xl overflow-hidden">
+      <div className={`${mobileView === 'menu' ? 'hidden' : 'flex'} lg:flex w-full lg:w-[480px] flex-shrink-0 bg-white border-l-0 lg:border-l border-gray-200 flex-col shadow-xl overflow-hidden`}>
 
         {/* Bill Header */}
         <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 flex-shrink-0">
           <div className="flex items-center justify-between text-white">
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileView('menu')}
+                aria-label="Back to menu"
+                className="lg:hidden -ml-1 p-1 rounded hover:bg-white/20 transition"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
               <Receipt className="w-4 h-4" />
               <span className="font-bold text-sm tracking-wide uppercase">Sale Entry</span>
             </div>
@@ -527,6 +535,22 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+
+      {/* Mobile bottom nav: switch between Menu and Billing */}
+      {mobileView === 'menu' && (
+        <button
+          onClick={() => setMobileView('cart')}
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xl px-4 py-3 flex items-center justify-between font-semibold"
+        >
+          <span className="flex items-center gap-2 text-sm">
+            <ShoppingCart className="w-4 h-4" />
+            {cart.items.reduce((n, i) => n + i.quantity, 0)} items
+          </span>
+          <span className="text-sm">
+            {cart.items.length > 0 ? `View Bill · ${RS}${invoiceValue.toFixed(2)}` : 'View Bill'}
+          </span>
+        </button>
+      )}
 
       {/* Held Bills Modal */}
       {showHeldModal && (
