@@ -38,14 +38,38 @@
   }
 }
 
+/* Kept in normal layout but shifted off-screen (not display:none) so its real
+   rendered height can be measured before printing, to size the page exactly
+   to the receipt instead of wasting paper on a fixed-length page. */
+#print-root {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  width: 302px; /* ~80mm at 96dpi */
+}
+
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  .print-only {
-    display: block !important;
-  }
   body {
     background: white;
+  }
+  #root {
+    display: none !important;
+  }
+  #print-root {
+    position: static;
+    left: 0;
+  }
+  .printable-receipt {
+    /* No padding override here on purpose — it must match the padding used
+       while off-screen (the component's own p-5), since handlePrint measures
+       the off-screen height to size @page. A mismatch here makes content
+       overflow onto a spurious blank second page. */
+    width: 100%;
+    max-width: 300px;
+    margin: 0;
+  }
+  @page {
+    size: 80mm 297mm;
+    margin: 0;
   }
 }

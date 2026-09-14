@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
 import {
@@ -66,6 +67,22 @@ export default function BillingPage() {
   const [heldOrders, setHeldOrders] = useState<Order[]>([]);
   const [loadingHeld, setLoadingHeld] = useState(false);
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    const el = receiptRef.current;
+    let styleTag = document.getElementById('dynamic-print-page-size') as HTMLStyleElement | null;
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'dynamic-print-page-size';
+      document.head.appendChild(styleTag);
+    }
+    if (el) {
+      const heightMM = Math.ceil((el.getBoundingClientRect().height / 96) * 25.4) + 5;
+      styleTag.textContent = `@media print { @page { size: 80mm ${heightMM}mm; margin: 0; } }`;
+    }
+    window.print();
+  };
 
   const [custName, setCustName] = useState(cart.customerName);
   const [custPhone, setCustPhone] = useState(cart.customerPhone);
@@ -616,128 +633,146 @@ export default function BillingPage() {
       )}
 
       {/* ── Print Bill Modal ── */}
-      {showBillModal && savedOrder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-auto max-h-[90vh] relative">
+      {showBillModal && savedOrder && (() => {
+        const receiptBody = (
+          <>
+            {/* Restaurant Header */}
+            <div className="text-center mb-3">
+              <p className="text-[10px] tracking-widest uppercase text-gray-500 mb-0.5">Bill of Supply</p>
+              <h2 className="text-xl font-black uppercase tracking-wide leading-tight">
+                {restaurant?.name || 'RestoBill'}
+              </h2>
+              {restaurant?.address && (
+                <p className="text-[11px] font-semibold mt-0.5 uppercase">{restaurant.address}</p>
+              )}
+              {restaurant?.phone && (
+                <p className="text-[11px] mt-0.5">Phone : {restaurant.phone}</p>
+              )}
+              {restaurant?.gstin && (
+                <p className="text-[11px] mt-0.5">GSTIN : {restaurant.gstin}</p>
+              )}
+            </div>
 
-            {/* Close button — hidden on print */}
-            <button
-              onClick={() => setShowBillModal(false)}
-              className="no-print absolute top-3 right-3 z-10 w-8 h-8 bg-gray-100 hover:bg-red-100 hover:text-red-500 rounded-full flex items-center justify-center transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            {/* ── Thermal Receipt ── */}
-            <div className="p-5 font-mono text-xs text-gray-900" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
-
-              {/* Restaurant Header */}
-              <div className="text-center mb-3">
-                <p className="text-[10px] tracking-widest uppercase text-gray-500 mb-0.5">Bill of Supply</p>
-                <h2 className="text-xl font-black uppercase tracking-wide leading-tight">
-                  {restaurant?.name || 'RestoBill'}
-                </h2>
-                {restaurant?.address && (
-                  <p className="text-[11px] font-semibold mt-0.5 uppercase">{restaurant.address}</p>
-                )}
-                {restaurant?.phone && (
-                  <p className="text-[11px] mt-0.5">Phone : {restaurant.phone}</p>
-                )}
-                {restaurant?.gstin && (
-                  <p className="text-[11px] mt-0.5">GSTIN : {restaurant.gstin}</p>
-                )}
+            <div className="border-t border-b border-dashed border-gray-400 py-2 mb-2 grid grid-cols-2 gap-x-2 text-[11px]">
+              <div>
+                <p><span className="font-bold">Customer:</span> {savedOrder.customerName}</p>
+                <p><span className="font-bold">Mobile :</span> {savedOrder.customerPhone || ''}</p>
               </div>
-
-              <div className="border-t border-b border-dashed border-gray-400 py-2 mb-2 grid grid-cols-2 gap-x-2 text-[11px]">
-                <div>
-                  <p><span className="font-bold">Customer:</span> {savedOrder.customerName}</p>
-                  <p><span className="font-bold">Mobile :</span> {savedOrder.customerPhone || ''}</p>
-                </div>
-                <div className="text-right">
-                  <p><span className="font-bold">Bill No.</span> {savedOrder.orderNumber}</p>
-                  <p><span className="font-bold">Date :</span> {new Date(savedOrder.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                </div>
+              <div className="text-right">
+                <p><span className="font-bold">Bill No.</span> {savedOrder.orderNumber}</p>
+                <p><span className="font-bold">Date :</span> {new Date(savedOrder.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
               </div>
+            </div>
 
-              {/* Items Table */}
-              <table className="w-full text-[11px] mb-1">
-                <thead>
-                  <tr className="border-b border-dashed border-gray-400">
-                    <th className="text-left pb-1 w-5">S.</th>
-                    <th className="text-left pb-1">Description</th>
-                    <th className="text-center pb-1 w-8">Qty</th>
-                    <th className="text-right pb-1 w-16">Rate</th>
-                    <th className="text-right pb-1 w-16">Amount</th>
+            {/* Items Table */}
+            <table className="w-full text-[11px] mb-1">
+              <thead>
+                <tr className="border-b border-dashed border-gray-400">
+                  <th className="text-left pb-1 w-5">S.</th>
+                  <th className="text-left pb-1">Description</th>
+                  <th className="text-center pb-1 w-8">Qty</th>
+                  <th className="text-right pb-1 w-16">Rate</th>
+                  <th className="text-right pb-1 w-16">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {savedOrder.items.map((item: any, idx: number) => (
+                  <tr key={item.id} className="border-b border-dotted border-gray-200">
+                    <td className="py-0.5 align-top">{idx + 1}</td>
+                    <td className="py-0.5 font-semibold uppercase">{item.name}</td>
+                    <td className="py-0.5 text-center">{item.quantity}</td>
+                    <td className="py-0.5 text-right">{Number(item.price).toFixed(2)}</td>
+                    <td className="py-0.5 text-right font-bold">{Number(item.total).toFixed(2)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {savedOrder.items.map((item: any, idx: number) => (
-                    <tr key={item.id} className="border-b border-dotted border-gray-200">
-                      <td className="py-0.5 align-top">{idx + 1}</td>
-                      <td className="py-0.5 font-semibold uppercase">{item.name}</td>
-                      <td className="py-0.5 text-center">{item.quantity}</td>
-                      <td className="py-0.5 text-right">{Number(item.price).toFixed(2)}</td>
-                      <td className="py-0.5 text-right font-bold">{Number(item.total).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
 
-              <p className="text-[11px] mb-2">
-                Item Qty: {savedOrder.items.reduce((s: number, i: any) => s + i.quantity, 0)}
-              </p>
+            <p className="text-[11px] mb-2">
+              Item Qty: {savedOrder.items.reduce((s: number, i: any) => s + i.quantity, 0)}
+            </p>
 
-              {/* Totals */}
-              <div className="border-t border-dashed border-gray-400 pt-2 space-y-0.5 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Value of Goods</span>
-                  <span>{Number(savedOrder.subtotal).toFixed(2)}</span>
-                </div>
-                {Number(savedOrder.discount) > 0 && (
-                  <div className="flex justify-between">
-                    <span>Discount ({savedOrder.discount}%)</span>
-                    <span>- {(Number(savedOrder.subtotal) * Number(savedOrder.discount) / 100).toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span>GST ({globalSettings?.gstPercentage || 5}%)</span>
-                  <span>{Number(savedOrder.tax).toFixed(2)}</span>
-                </div>
+            {/* Totals */}
+            <div className="border-t border-dashed border-gray-400 pt-2 space-y-0.5 text-[11px]">
+              <div className="flex justify-between">
+                <span>Value of Goods</span>
+                <span>{Number(savedOrder.subtotal).toFixed(2)}</span>
               </div>
-
-              <div className="border-t border-b border-dashed border-gray-400 my-1 py-1 flex justify-between text-sm font-black uppercase">
-                <span>G.Total :-</span>
-                <span>{Number(savedOrder.total).toFixed(2)}</span>
-              </div>
-
-              <p className="text-[11px] mt-1 border-b border-dashed border-gray-400 pb-2">
-                Rs. {numberToWords(Number(savedOrder.total))} Only
-              </p>
-
-              <div className="flex justify-between text-[11px] mt-2">
-                <span>E.&amp;O.E</span>
-                <span>For &quot;{restaurant?.name || 'RestoBill'}&quot;</span>
+              {Number(savedOrder.discount) > 0 && (
+                <div className="flex justify-between">
+                  <span>Discount ({savedOrder.discount}%)</span>
+                  <span>- {(Number(savedOrder.subtotal) * Number(savedOrder.discount) / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>GST ({globalSettings?.gstPercentage || 5}%)</span>
+                <span>{Number(savedOrder.tax).toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Actions — hidden on print */}
-            <div className="no-print px-5 pb-5 flex gap-3 border-t border-gray-100 pt-4">
-              <button
-                onClick={() => setShowBillModal(false)}
-                className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="w-4 h-4 text-green-500" /> Done
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-medium text-sm hover:bg-orange-600 transition flex items-center justify-center gap-2"
-              >
-                <Printer className="w-4 h-4" /> Print
-              </button>
+            <div className="border-t border-b border-dashed border-gray-400 my-1 py-1 flex justify-between text-sm font-black uppercase">
+              <span>G.Total :-</span>
+              <span>{Number(savedOrder.total).toFixed(2)}</span>
             </div>
-          </div>
-        </div>
-      )}
+
+            <p className="text-[11px] mt-1 border-b border-dashed border-gray-400 pb-2">
+              Rs. {numberToWords(Number(savedOrder.total))} Only
+            </p>
+
+            <div className="flex justify-between text-[11px] mt-2">
+              <span>E.&amp;O.E</span>
+              <span>For &quot;{restaurant?.name || 'RestoBill'}&quot;</span>
+            </div>
+          </>
+        );
+
+        const receiptClass = "printable-receipt p-5 font-mono text-xs text-gray-900";
+        const receiptStyle = { fontFamily: "'Courier New', Courier, monospace" };
+        const printRoot = document.getElementById('print-root');
+
+        return (
+          <>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-auto max-h-[90vh] relative">
+
+                <button
+                  onClick={() => setShowBillModal(false)}
+                  className="absolute top-3 right-3 z-10 w-8 h-8 bg-gray-100 hover:bg-red-100 hover:text-red-500 rounded-full flex items-center justify-center transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className={receiptClass} style={receiptStyle}>{receiptBody}</div>
+
+                <div className="px-5 pb-5 flex gap-3 border-t border-gray-100 pt-4">
+                  <button
+                    onClick={() => setShowBillModal(false)}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4 text-green-500" /> Done
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-medium text-sm hover:bg-orange-600 transition flex items-center justify-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" /> Print
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Print-only copy, portaled outside the modal so it isn't nested in a
+                position:fixed ancestor — Chrome's print engine can blank out fixed
+                subtrees, which caused the empty pages. Kept permanently laid out
+                off-screen (not display:none) so its real height is measurable for
+                handlePrint to size the printed page to the content. */}
+            {printRoot && createPortal(
+              <div ref={receiptRef} className={receiptClass} style={receiptStyle}>{receiptBody}</div>,
+              printRoot,
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
