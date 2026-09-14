@@ -638,22 +638,22 @@ export default function BillingPage() {
           <>
             {/* Restaurant Header */}
             <div className="text-center mb-3">
-              <p className="text-[10px] tracking-widest uppercase text-gray-500 mb-0.5">Bill of Supply</p>
-              <h2 className="text-xl font-black uppercase tracking-wide leading-tight">
+              <p className="text-[11px] tracking-widest uppercase text-gray-500 mb-0.5">Bill of Supply</p>
+              <h2 className="text-2xl font-black uppercase tracking-wide leading-tight">
                 {restaurant?.name || 'RestoBill'}
               </h2>
               {restaurant?.address && (
-                <p className="text-[11px] font-semibold mt-0.5 uppercase">{restaurant.address}</p>
+                <p className="text-[13px] font-semibold mt-0.5 uppercase">{restaurant.address}</p>
               )}
               {restaurant?.phone && (
-                <p className="text-[11px] mt-0.5">Phone : {restaurant.phone}</p>
+                <p className="text-[13px] mt-0.5">Phone : {restaurant.phone}</p>
               )}
               {restaurant?.gstin && (
-                <p className="text-[11px] mt-0.5">GSTIN : {restaurant.gstin}</p>
+                <p className="text-[13px] mt-0.5">GSTIN : {restaurant.gstin}</p>
               )}
             </div>
 
-            <div className="border-t border-b border-dashed border-gray-400 py-2 mb-2 grid grid-cols-2 gap-x-2 text-[11px]">
+            <div className="border-t border-b border-gray-400 py-2 mb-2 grid grid-cols-2 gap-x-2 text-[13px]">
               <div>
                 <p><span className="font-bold">Customer:</span> {savedOrder.customerName}</p>
                 <p><span className="font-bold">Mobile :</span> {savedOrder.customerPhone || ''}</p>
@@ -665,9 +665,9 @@ export default function BillingPage() {
             </div>
 
             {/* Items Table */}
-            <table className="w-full text-[11px] mb-1">
+            <table className="w-full text-[13px] mb-1">
               <thead>
-                <tr className="border-b border-dashed border-gray-400">
+                <tr className="border-b border-gray-400">
                   <th className="text-left pb-1 w-5">S.</th>
                   <th className="text-left pb-1">Description</th>
                   <th className="text-center pb-1 w-8">Qty</th>
@@ -677,7 +677,7 @@ export default function BillingPage() {
               </thead>
               <tbody>
                 {savedOrder.items.map((item: any, idx: number) => (
-                  <tr key={item.id} className="border-b border-dotted border-gray-200">
+                  <tr key={item.id} className="border-b border-gray-200">
                     <td className="py-0.5 align-top">{idx + 1}</td>
                     <td className="py-0.5 font-semibold uppercase">{item.name}</td>
                     <td className="py-0.5 text-center">{item.quantity}</td>
@@ -688,12 +688,12 @@ export default function BillingPage() {
               </tbody>
             </table>
 
-            <p className="text-[11px] mb-2">
+            <p className="text-[13px] mb-2">
               Item Qty: {savedOrder.items.reduce((s: number, i: any) => s + i.quantity, 0)}
             </p>
 
             {/* Totals */}
-            <div className="border-t border-dashed border-gray-400 pt-2 space-y-0.5 text-[11px]">
+            <div className="border-t border-gray-400 pt-2 space-y-0.5 text-[13px]">
               <div className="flex justify-between">
                 <span>Value of Goods</span>
                 <span>{Number(savedOrder.subtotal).toFixed(2)}</span>
@@ -710,23 +710,23 @@ export default function BillingPage() {
               </div>
             </div>
 
-            <div className="border-t border-b border-dashed border-gray-400 my-1 py-1 flex justify-between text-sm font-black uppercase">
+            <div className="border-t border-b border-gray-400 my-1 py-1 flex justify-between text-base font-black uppercase">
               <span>G.Total :-</span>
               <span>{Number(savedOrder.total).toFixed(2)}</span>
             </div>
 
-            <p className="text-[11px] mt-1 border-b border-dashed border-gray-400 pb-2">
+            <p className="text-[13px] mt-1 border-b border-gray-400 pb-2">
               Rs. {numberToWords(Number(savedOrder.total))} Only
             </p>
 
-            <div className="flex justify-between text-[11px] mt-2">
+            <div className="flex justify-between text-[13px] mt-2">
               <span>E.&amp;O.E</span>
               <span>For &quot;{restaurant?.name || 'RestoBill'}&quot;</span>
             </div>
           </>
         );
 
-        const receiptClass = "printable-receipt p-5 font-mono text-xs text-gray-900";
+        const receiptClass = "printable-receipt pt-2 pb-9 px-5 font-mono text-sm text-gray-900";
         const receiptStyle = { fontFamily: "'Courier New', Courier, monospace" };
         const printRoot = document.getElementById('print-root');
 
