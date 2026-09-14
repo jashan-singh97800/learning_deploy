@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 import {
   ShoppingCart, Plus, Minus, Trash2, Search,
   UtensilsCrossed, User, Phone, Receipt, Printer,
-  CheckCircle, X, MapPin, MessageSquare, Hash,
+  X, MapPin, MessageSquare, Hash,
   Calendar, Tag, PauseCircle, ListRestart, ArrowUpRight, ArrowLeft, RefreshCw
 } from 'lucide-react';
 import { getHeldOrders, deleteOrder } from '../api/orders';
@@ -78,7 +78,11 @@ export default function BillingPage() {
       document.head.appendChild(styleTag);
     }
     if (el) {
-      const heightMM = Math.ceil((el.getBoundingClientRect().height / 96) * 25.4) + 5;
+      // Generous buffer on purpose: thermal printer drivers commonly drop
+      // (rather than paginate) any content past a single continuous sheet,
+      // so underestimating this height silently loses the tail of the
+      // receipt instead of just wasting paper.
+      const heightMM = Math.ceil((el.getBoundingClientRect().height / 96) * 25.4) + 20;
       styleTag.textContent = `@media print { @page { size: 80mm ${heightMM}mm; margin: 0; } }`;
     }
     window.print();
@@ -196,6 +200,41 @@ export default function BillingPage() {
       toast.error('Failed to load held bills');
     } finally {
       setLoadingHeld(false);
+    }
+  };
+
+  const handleHoldFromReceipt = async () => {
+    if (!savedOrder) return;
+    setSubmitting(true);
+    try {
+      // createOrder upserts by id — reusing savedOrder.id updates this
+      // already-placed order's status instead of creating a new one.
+      await createOrder({
+        id: savedOrder.id,
+        customerName: savedOrder.customerName,
+        customerPhone: savedOrder.customerPhone || undefined,
+        notes: savedOrder.notes || undefined,
+        items: savedOrder.items.map((i: any) => ({
+          menuItemId: i.menuItemId,
+          name: i.name,
+          price: Number(i.price),
+          quantity: i.quantity,
+          discount: Number(i.discount),
+          total: Number(i.total),
+        })),
+        subtotal: Number(savedOrder.subtotal),
+        tax: Number(savedOrder.tax),
+        discount: Number(savedOrder.discount),
+        total: Number(savedOrder.total),
+        status: 'hold',
+      });
+      setShowBillModal(false);
+      setSavedOrder(null);
+      toast.success('Bill moved to hold');
+    } catch {
+      toast.error('Failed to hold bill');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -507,7 +546,7 @@ export default function BillingPage() {
               <div className="flex items-center gap-2">
                 <input 
                   type="number" step="0.01"
-                  value={customGst ?? (globalSettings?.gstPercentage || 5)}
+                  value={customGst ?? (globalSettings?.gstPercentage ?? 5)}
                   onChange={(e) => setCustomGst(parseFloat(e.target.value))}
                   className="w-12 text-center text-[10px] border border-gray-200 rounded px-1 py-0.5 focus:ring-1 focus:ring-orange-300 bg-white"
                 />
@@ -643,7 +682,7 @@ export default function BillingPage() {
                 {restaurant?.name || 'RestoBill'}
               </h2>
               {restaurant?.address && (
-                <p className="text-[13px] font-semibold mt-0.5 uppercase">{restaurant.address}</p>
+                <p className="text-[13px] font-bold mt-0.5 uppercase">{restaurant.address}</p>
               )}
               {restaurant?.phone && (
                 <p className="text-[13px] mt-0.5">Phone : {restaurant.phone}</p>
@@ -679,7 +718,7 @@ export default function BillingPage() {
                 {savedOrder.items.map((item: any, idx: number) => (
                   <tr key={item.id} className="border-b border-gray-200">
                     <td className="py-0.5 align-top">{idx + 1}</td>
-                    <td className="py-0.5 font-semibold uppercase">{item.name}</td>
+                    <td className="py-0.5 font-bold uppercase">{item.name}</td>
                     <td className="py-0.5 text-center">{item.quantity}</td>
                     <td className="py-0.5 text-right">{Number(item.price).toFixed(2)}</td>
                     <td className="py-0.5 text-right font-bold">{Number(item.total).toFixed(2)}</td>
@@ -704,10 +743,6 @@ export default function BillingPage() {
                   <span>- {(Number(savedOrder.subtotal) * Number(savedOrder.discount) / 100).toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>GST ({globalSettings?.gstPercentage || 5}%)</span>
-                <span>{Number(savedOrder.tax).toFixed(2)}</span>
-              </div>
             </div>
 
             <div className="border-t border-b border-gray-400 my-1 py-1 flex justify-between text-base font-black uppercase">
@@ -726,7 +761,7 @@ export default function BillingPage() {
           </>
         );
 
-        const receiptClass = "printable-receipt pt-2 pb-9 px-5 font-mono text-sm text-gray-900";
+        const receiptClass = "printable-receipt pt-2 pb-9 px-5 font-mono font-bold text-sm text-gray-900";
         const receiptStyle = { fontFamily: "'Courier New', Courier, monospace" };
         const printRoot = document.getElementById('print-root');
 
@@ -746,10 +781,11 @@ export default function BillingPage() {
 
                 <div className="px-5 pb-5 flex gap-3 border-t border-gray-100 pt-4">
                   <button
-                    onClick={() => setShowBillModal(false)}
-                    className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2"
+                    onClick={handleHoldFromReceipt}
+                    disabled={submitting}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-medium text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    <CheckCircle className="w-4 h-4 text-green-500" /> Done
+                    <PauseCircle className="w-4 h-4 text-slate-500" /> Hold
                   </button>
                   <button
                     onClick={handlePrint}
